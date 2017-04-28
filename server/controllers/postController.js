@@ -121,6 +121,9 @@ postController.getPublicPosts = (req, res, next) => {
           });
           post.comments = commentsForPost;
         });
+        posts.sort((a, b) => { // sorts posts by date from oldest to newest
+          return a.createdAt>b.createdAt ? 1 : a.createdAt<b.createdAt ? -1 : 0;
+        });
         return res.send(posts);
       });
     }
