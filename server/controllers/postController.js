@@ -1,5 +1,6 @@
 import Post from '../models/post';
 import Comment from '../models/comment';
+import Following from '../models/following';
 import Datauri from 'datauri';
 import cloudinary from 'cloudinary';
 import path from 'path';
@@ -11,25 +12,21 @@ const postController = {};
 
 mongoose.Promise = global.Promise;
 
-// Query for comments of a single post
-function getCommentsQuery(_post){
-  var query = Comment.find({_post}, '_id _creator createdAt text').populate({
-    path: '_creator',
-    select: 'username -_id'
-  });
-
-  return query;
-}
-
-// Query for comments of an array of posts, recieves an array of post ids
+// Query for comments of posts
 function getCommentsQuery(postIds){
   var query = Comment.find({ '_post': { $in: postIds }}, '_id _creator createdAt text _post').populate({
     path: '_creator',
     select: 'username -_id'
   });
-
   return query;
 }
+
+function getFollowingIdsQuery(userId){
+  var query = Following.findOne({ '_user': userId }, 'following -_id');
+  return query;
+}
+
+
 
 postController.createPost = (req, res, next) => {
   const image = req.file;
@@ -64,7 +61,6 @@ postController.createPost = (req, res, next) => {
 // Requires no authentication
 postController.getPublicPost = (req, res, next) => {
   const postId = req.params.id;
-  let query = getCommentsQuery(postId);
   Post.findById(postId).lean().populate({
     path: '_creator',
     select: 'username private -_id',
@@ -73,7 +69,7 @@ postController.getPublicPost = (req, res, next) => {
 
     if (post) {
       if(!post._creator.private) {
-        query.exec((err, comments) => { // Query for comments of post
+        getCommentsQuery(postId).exec((err, comments) => { // Query for comments of post
           if(err) { return next(err); }
           const existingComments = comments.filter((comment) => { // filters out the deleted comments
             return !comment.isDeleted;
@@ -145,6 +141,85 @@ postController.deletePost = (req, res, next) => {
       })
       return res.send(post);
     });
+  });
+}
+
+// Requires authentication
+postController.getFollowingPosts = (req, res, next) => {
+  const userId = req.user._id;
+  getFollowingIdsQuery(userId).exec((err, following) => {
+    if (err) { return next(err); }
+
+    Post.find({ '_creator': { $in: following.following}}).lean().populate({
+      path: '_creator',
+      select: 'username -_id'
+    }).exec((err, posts) => {
+      if (err) { return next(err); }
+
+      if (posts) {
+        const publicPosts = posts.filter((post) => {
+          return post._id;
+        });
+        const publicPostsIds = publicPosts.map((post) => {
+          return post._id;
+        });
+        getCommentsQuery(publicPostsIds).exec((err, comments) => { // Query for comments of all public posts
+          if(err) { return next(err); }
+
+          const existingComments = comments.filter((comment) => {
+            return !comment.isDeleted;
+          });
+          publicPosts.forEach((post) => {
+            const commentsForPost = existingComments.filter((comment) => {
+              return comment._post.toString() === post._id.toString();
+            });
+            commentsForPost.sort((a, b) => { // sorts comments by date from oldest to newest
+              return a.createdAt>b.createdAt ? 1 : a.createdAt<b.createdAt ? -1 : 0;
+            });
+            post.comments = commentsForPost;
+          });
+          posts.sort((a, b) => { // sorts posts by date from oldest to newest
+            return a.createdAt>b.createdAt ? 1 : a.createdAt<b.createdAt ? -1 : 0;
+          });
+          return res.send(posts);
+        });
+      }
+    });
+  });
+}
+
+//Requires authentication
+postController.getPost = (req, res, next) => {
+  const userId = req.user._id;
+  const postId = req.params.id;
+  Post.findById(postId).lean().populate({
+    path: '_creator',
+    select: 'username private _id',
+  }).exec((err, post) => {
+    if (err) { return next(err); }
+
+    if (post) {
+      getFollowingIdsQuery(userId).exec((err, following) => {
+        if (err) { return next(err); }
+
+        if(following.following.toString().includes(post._creator._id.toString()) || !post._creator.private){
+          getCommentsQuery(postId).exec((err, comments) => { // Query for comments of post
+            if(err) { return next(err); }
+            const existingComments = comments.filter((comment) => { // filters out the deleted comments
+              return !comment.isDeleted;
+            });
+            existingComments.sort((a, b) => { // sorts comments by date from oldest to newest
+              return a.createdAt>b.createdAt ? 1 : a.createdAt<b.createdAt ? -1 : 0;
+            });
+            post.comments = existingComments;
+            return res.send(post);
+          });
+        }
+        else {
+          return res.send({ error: 'This user is private' });
+        }
+      });
+    }
   });
 }
 

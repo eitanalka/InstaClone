@@ -28,6 +28,8 @@ routes.get('/', requireAuth, userController.feature);
 routes.post('/createpost', upload, requireAuth, postController.createPost);
 routes.get('/getpublicpost/:id', jsonParser, postController.getPublicPost);
 routes.get('/getpublicposts', jsonParser, postController.getPublicPosts);
+routes.get('/getfollowingposts', jsonParser, requireAuth, postController.getFollowingPosts);
+routes.get('/getpost/:id', jsonParser, requireAuth, postController.getPost);
 routes.delete('/deletepost/:id', jsonParser, requireAuth, postController.deletePost);
 
 // Comment routes

@@ -25,6 +25,7 @@ userController.signup = (req, res, next) => {
   const password = req.body.password;
   const firstName = req.body.firstname;
   const lastName = req.body.lastname;
+  const privateUser = req.body.private;
   if (!username || !password) {
     return res.status(422).send({ error: 'You must provide username and password' });
   }
@@ -47,7 +48,8 @@ userController.signup = (req, res, next) => {
       username,
       password,
       firstName,
-      lastName
+      lastName,
+      private: privateUser
     });
 
     user.save((err) => {
