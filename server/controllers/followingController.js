@@ -67,10 +67,11 @@ followingController.unfollow = (req, res, next) => {
   const followingId = req.body.followingId;
 
   Followers.update({ _user: followingId }, { $pull: { 'followers': _user } }, (err) => {
-    
+    if (err) { return next(err); }
   });
 
   Following.update({ _user }, { $pull: { 'following': followingId } }, (err, following) => {
+    if (err) { return next(err); }
     return res.send(following);
   });
 }

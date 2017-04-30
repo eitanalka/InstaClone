@@ -1,5 +1,6 @@
 import Post from '../models/post';
 import Comment from '../models/comment';
+import Likes from '../models/likes';
 import Following from '../models/following';
 import Datauri from 'datauri';
 import cloudinary from 'cloudinary';
@@ -14,7 +15,7 @@ mongoose.Promise = global.Promise;
 
 // Query for comments of posts
 function getCommentsQuery(postIds){
-  var query = Comment.find({ '_post': { $in: postIds }}, '_id _creator createdAt text _post').populate({
+  var query = Comment.find({ '_post': { $in: postIds } }, '_id _creator createdAt text _post').populate({
     path: '_creator',
     select: 'username -_id'
   });
@@ -26,7 +27,10 @@ function getFollowingIdsQuery(userId){
   return query;
 }
 
-
+function getLikesQuery(postIds){
+  var query = Likes.find({ '_post': { $in: postIds } }, 'likes createdAt _post');
+  return query;
+}
 
 postController.createPost = (req, res, next) => {
   const image = req.file;
@@ -78,7 +82,14 @@ postController.getPublicPost = (req, res, next) => {
             return a.createdAt>b.createdAt ? 1 : a.createdAt<b.createdAt ? -1 : 0;
           });
           post.comments = existingComments;
-          return res.send(post);
+          getLikesQuery(postId).exec((err, likes) => {
+            if(err) { return next(err); }
+            likes.sort((a, b) => {
+              return a.createdAt>b.createdAt ? 1 : a.createdAt<b.createdAt ? -1 : 0;
+            });
+            post.likes = likes;
+            return res.send(post);
+          });
         });
       }
       else return res.send({ error: 'This user is private' });
@@ -117,10 +128,24 @@ postController.getPublicPosts = (req, res, next) => {
           });
           post.comments = commentsForPost;
         });
-        posts.sort((a, b) => { // sorts posts by date from oldest to newest
-          return a.createdAt>b.createdAt ? 1 : a.createdAt<b.createdAt ? -1 : 0;
+        getLikesQuery(publicPostsIds).exec((err, likes) => {
+          if(err) { return next(err); }
+
+          publicPosts.forEach((post) => {
+            const likesForPost = likes.filter((likes) => {
+              console.log(likes);
+              return likes._post.toString() === post._id.toString();
+            });
+            likesForPost.sort((a, b) => {
+              return a.createdAt>b.createdAt ? 1 : a.createdAt<b.createdAt ? -1 : 0;
+            });
+            post.likes = likesForPost;
+          });
+          posts.sort((a, b) => { // sorts posts by date from oldest to newest
+            return a.createdAt>b.createdAt ? 1 : a.createdAt<b.createdAt ? -1 : 0;
+          });
+          return res.send(posts);
         });
-        return res.send(posts);
       });
     }
   });
@@ -136,9 +161,12 @@ postController.deletePost = (req, res, next) => {
     }
     Post.findByIdAndRemove(postId, (err, post) => {
       if(err) { return next(err); }
-      Comment.remove({ _post: postId}, (err) => {
+      Comment.remove({ _post: postId }, (err) => {
         if(err) { return next(err); }
-      })
+      });
+      Likes.remove({ _post: postId }, (err) => {
+        if(err) { return next(err); }
+      });
       return res.send(post);
     });
   });
@@ -178,10 +206,24 @@ postController.getFollowingPosts = (req, res, next) => {
             });
             post.comments = commentsForPost;
           });
-          posts.sort((a, b) => { // sorts posts by date from oldest to newest
-            return a.createdAt>b.createdAt ? 1 : a.createdAt<b.createdAt ? -1 : 0;
+          getLikesQuery(publicPostsIds).exec((err, likes) => {
+            if(err) { return next(err); }
+
+            publicPosts.forEach((post) => {
+              const likesForPost = likes.filter((likes) => {
+                console.log(likes);
+                return likes._post.toString() === post._id.toString();
+              });
+              likesForPost.sort((a, b) => {
+                return a.createdAt>b.createdAt ? 1 : a.createdAt<b.createdAt ? -1 : 0;
+              });
+              post.likes = likesForPost;
+            });
+            posts.sort((a, b) => { // sorts posts by date from oldest to newest
+              return a.createdAt>b.createdAt ? 1 : a.createdAt<b.createdAt ? -1 : 0;
+            });
+            return res.send(posts);
           });
-          return res.send(posts);
         });
       }
     });
@@ -212,7 +254,14 @@ postController.getPost = (req, res, next) => {
               return a.createdAt>b.createdAt ? 1 : a.createdAt<b.createdAt ? -1 : 0;
             });
             post.comments = existingComments;
-            return res.send(post);
+            getLikesQuery(postId).exec((err, likes) => {
+              if(err) { return next(err); }
+              likes.sort((a, b) => {
+                return a.createdAt>b.createdAt ? 1 : a.createdAt<b.createdAt ? -1 : 0;
+              });
+              post.likes = likes;
+              return res.send(post);
+            });
           });
         }
         else {

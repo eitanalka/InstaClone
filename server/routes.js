@@ -12,6 +12,7 @@ import userController from './controllers/userController';
 import postController from './controllers/postController';
 import commentController from './controllers/commentController';
 import followingController from './controllers/followingController';
+import likesController from './controllers/likesController';
 
 const routes = express();
 const storage = multer.memoryStorage();
@@ -40,5 +41,10 @@ routes.delete('/deletecomment', jsonParser, requireAuth, commentController.delet
 routes.post('/follow', jsonParser, requireAuth, followingController.follow);
 routes.get('/getfollowing', jsonParser, requireAuth, followingController.getFollowing);
 routes.delete('/unfollow', jsonParser, requireAuth, followingController.unfollow);
+
+// Likes routes
+routes.post('/like', jsonParser, requireAuth, likesController.like);
+routes.post('/unlike', jsonParser, requireAuth, likesController.unlike);
+routes.post('/likeorunlike', jsonParser, requireAuth, likesController.likeOrUnlike);
 
 export default routes;
