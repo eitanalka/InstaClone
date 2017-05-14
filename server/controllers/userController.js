@@ -61,10 +61,6 @@ userController.signup = (req, res, next) => {
   });
 }
 
-userController.feature = (req, res, next) => {
-  res.send({ message: req.user._id});
-}
-
 userController.uploadProfilePic = (req, res, next) => {
   if (req.file) {
     const extension = (path.extname(req.file.originalname).toString());
@@ -81,6 +77,15 @@ userController.uploadProfilePic = (req, res, next) => {
     return res.send('Upload succesful')
   }
   res.send({ error: 'Missing file' });
+}
+
+userController.deleteUser = (req, res, next) => {
+  const userId = req.user._id;
+
+  User.findByIdAndRemove(userId, (err, user) => {
+    if(err) { return next(err); }
+    return res.send(user);
+  });
 }
 
 export default userController;

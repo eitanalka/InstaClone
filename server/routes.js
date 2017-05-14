@@ -12,6 +12,7 @@ import userController from './controllers/userController';
 import postController from './controllers/postController';
 import commentController from './controllers/commentController';
 import followingController from './controllers/followingController';
+import followersController from './controllers/followersController';
 import likesController from './controllers/likesController';
 
 const routes = express();
@@ -22,8 +23,8 @@ const jsonParser = bodyParser.json({ type: '*/*', limit: '50mb'});
 // User Routes
 routes.post('/signup', jsonParser, userController.signup); // signup user
 routes.post('/signin', jsonParser, requireSignin, userController.signin); // signin user
-routes.post('/uploadProfilePic', upload, requireAuth, userController.uploadProfilePic); // upload user profile pic
-routes.get('/', requireAuth, userController.feature);
+routes.post('/uploadprofilepic', upload, requireAuth, userController.uploadProfilePic); // upload user profile pic
+routes.delete('/deleteuser', jsonParser, requireAuth, userController.deleteUser); // delete user
 
 // Post routes
 routes.post('/createpost', upload, requireAuth, postController.createPost);
@@ -41,6 +42,9 @@ routes.delete('/deletecomment', jsonParser, requireAuth, commentController.delet
 routes.post('/follow', jsonParser, requireAuth, followingController.follow);
 routes.get('/getfollowing', jsonParser, requireAuth, followingController.getFollowing);
 routes.delete('/unfollow', jsonParser, requireAuth, followingController.unfollow);
+
+// Followers routes
+routes.get('/getfollowers', jsonParser, requireAuth, followersController.getFollowers);
 
 // Likes routes
 routes.post('/like', jsonParser, requireAuth, likesController.like);

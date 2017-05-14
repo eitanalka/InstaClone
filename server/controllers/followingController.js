@@ -56,7 +56,10 @@ followingController.follow = (req, res, next) => {
 followingController.getFollowing = (req, res, next) => {
   const _user = req.user._id;
 
-  Following.findOne({ _user }, (err, pair) => {
+  Following.findOne({ _user }).populate({
+    path: 'following',
+    select: 'username'
+  }).exec((err, pair) => {
     if (err) { return next(err); }
     return res.send(pair);
   });
