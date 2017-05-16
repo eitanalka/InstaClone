@@ -1,5 +1,9 @@
 import jwt from 'jwt-simple';
 import User from '../models/user';
+import Following from '../models/following';
+import Followers from '../models/followers';
+import Notifications from '../models/notifications';
+import Requests from '../models/requests';
 import config from '../config';
 import Datauri from 'datauri';
 import cloudinary from 'cloudinary';
@@ -54,6 +58,25 @@ userController.signup = (req, res, next) => {
 
     user.save((err) => {
       if (err) { return next(err); }
+
+      const _user = user._id;
+      const following = new Following({ _user });
+      const followers = new Followers({ _user });
+      const notifications = new Notifications({ _user });
+      const requests = new Requests({ _user });
+
+      following.save((err) => {
+        if (err) { return next(err); }
+      });
+      followers.save((err) => {
+        if (err) { return next(err); }
+      });
+      notifications.save((err) => {
+        if (err) { return next(err); }
+      });
+      requests.save((err) => {
+        if (err) { return next(err); }
+      });
 
       // Respond to request indicating the user was created
       res.json({ token: tokenForUser(user), userId: user._id});
